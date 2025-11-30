@@ -998,7 +998,7 @@ docker exec dota2_postgres psql -U airflow -d airflow -c "SELECT COUNT(*) FROM d
 ## 📞 Support & Contact
 
 - **Project Owner**: Kiet Nguyen
-- **Email**: kiet.nguyen@ecentric.com
+- **Email**: kiet.nguyen@ecentric.com & gpt4work.data@gmail.com
 - **Airflow UI**: http://localhost:8080
 - **PostgreSQL**: localhost:5432 (user: airflow, password: airflow)
 
