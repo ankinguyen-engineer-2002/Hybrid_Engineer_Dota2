@@ -1,0 +1,125 @@
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  build: .
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ./scripts:/opt/airflow/scripts
+    - ./export:/opt/airflow/export
+    - C:/Users/Admin/OneDrive - exData/Data:/opt/airflow/onedrive_sync
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on: &airflow-common-depends-on
+    postgres:
+      condition: service_healthy
+
+services:
+  # ==========================================
+  # DATABASE (Postgres)
+  # ==========================================
+  postgres:
+    image: postgres:13-bullseye
+    container_name: dota2_postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "airflow" ]
+      interval: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    networks:
+      - dota2-network
+
+  # ==========================================
+  # ORCHESTRATION (Airflow)
+  # ==========================================
+  airflow-init:
+    <<: *airflow-common
+    container_name: dota2_airflow_init
+    command: version
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
+    networks:
+      - dota2-network
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: dota2_airflow_webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - dota2-network
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: dota2_airflow_scheduler
+    command: scheduler
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - dota2-network
+
+  # ==========================================
+  # TRANSFORMATION (dbt)
+  # ==========================================
+  dbt:
+    build:
+      context: .
+      dockerfile: Dockerfile.dbt
+    container_name: dota2_dbt
+    command: tail -f /dev/null
+    working_dir: /dbt
+    volumes:
+      - ./dbt_project:/dbt
+      - ./dbt_profiles:/root/.dbt
+    environment:
+      DBT_POSTGRES_HOST: postgres
+      DBT_POSTGRES_USER: airflow
+      DBT_POSTGRES_PASSWORD: airflow
+      DBT_POSTGRES_DB: airflow
+      DBT_POSTGRES_PORT: 5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dota2-network
+
+volumes:
+  postgres-db-volume:
+
+
+networks:
+  dota2-network:
+    driver: bridge

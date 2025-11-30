@@ -1,0 +1,23 @@
+[
+  {
+    "table": "silver_dota2_matches",
+    "rows": 2038,
+    "size_mb": 4.42,
+    "file": "silver_dota2_matches.parquet",
+    "status": "SUCCESS"
+  },
+  {
+    "table": "silver_players",
+    "rows": 20380,
+    "size_mb": 2.92,
+    "file": "silver_players.parquet",
+    "status": "SUCCESS"
+  },
+  {
+    "table": "gold_match_analytics",
+    "rows": 2038,
+    "size_mb": 0.01,
+    "file": "gold_match_analytics.parquet",
+    "status": "SUCCESS"
+  }
+]

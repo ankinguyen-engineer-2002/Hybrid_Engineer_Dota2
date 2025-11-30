@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    make \
+    postgresql-client \
+    libpq-dev \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install psycopg2-binary first (pre-built wheel)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir psycopg2-binary
+
+# Then install dbt
+RUN pip install --no-cache-dir \
+    'dbt-core>=1.7,<2.0' \
+    'dbt-postgres>=1.7,<2.0'
+
+WORKDIR /dbt
+
+CMD ["tail", "-f", "/dev/null"]

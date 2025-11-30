@@ -1,0 +1,51 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: airflow
+    schema: bronze
+    tables:
+      - name: matches
+        description: "Raw match data from OpenDota API"
+        columns:
+          - name: match_id
+            tests:
+              - unique
+              - not_null
+          - name: raw_data
+            tests:
+              - not_null
+  
+  - name: dota
+    database: airflow
+    schema: dota
+    tables:
+      - name: dim_heroes
+      - name: dim_items
+      - name: dim_game_modes
+      - name: dim_lobby_types
+
+models:
+  - name: silver_matches
+    description: "Cleaned and structured match data"
+    columns:
+      - name: match_id
+        tests:
+          - unique
+          - not_null
+  
+  - name: silver_players
+    description: "Individual player performance per match"
+    columns:
+      - name: match_id
+        tests:
+          - not_null
+      - name: account_id
+        tests:
+          - not_null
+  
+  - name: gold_match_analytics
+    description: "Match analytics with metadata enrichment"
+  
+  - name: gold_player_stats
+    description: "Aggregated player statistics"
